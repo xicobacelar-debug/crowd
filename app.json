@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "SwingIQ",
+    "slug": "swing-intelligence",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "swingiq",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "SwingIQ needs camera access to record your golf swing for AI analysis.",
+        "NSMicrophoneUsageDescription": "SwingIQ needs microphone access for video recording.",
+        "NSPhotoLibraryUsageDescription": "SwingIQ needs access to your photo library to analyze existing swing videos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0E1A"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VIDEO"
+      ],
+      "package": "com.swingiq.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SwingIQ needs camera access to record your golf swing.",
+          "microphonePermission": "SwingIQ needs microphone access for video recording."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SwingIQ accesses your photos to analyze golf swing videos."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
