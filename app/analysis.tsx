@@ -75,7 +75,8 @@ export default function AnalysisScreen() {
 
       // Step 3: Analyze swing
       advanceStep(2);
-      const apiKey = await SecureStore.getItemAsync('anthropic_api_key');
+      const storedKey = await SecureStore.getItemAsync('anthropic_api_key');
+      const apiKey = storedKey || process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
       if (!apiKey) {
         Alert.alert(
           'API Key Required',
