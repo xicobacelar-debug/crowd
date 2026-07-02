@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { COLORS } from '../constants';
@@ -25,24 +25,21 @@ export default function ScoreRing({
   label,
 }: ScoreRingProps) {
   const animatedValue = useRef(new Animated.Value(0)).current;
-  const displayValue = useRef(new Animated.Value(0)).current;
+  const [displayScore, setDisplayScore] = useState(0);
 
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(animatedValue, {
-        toValue: score,
-        duration: 1400,
-        useNativeDriver: false,
-      }),
-      Animated.timing(displayValue, {
-        toValue: score,
-        duration: 1400,
-        useNativeDriver: false,
-      }),
-    ]).start();
+    const listenerId = animatedValue.addListener(({ value }) =>
+      setDisplayScore(Math.round(value))
+    );
+    Animated.timing(animatedValue, {
+      toValue: score,
+      duration: 1400,
+      useNativeDriver: false,
+    }).start();
+    return () => animatedValue.removeListener(listenerId);
   }, [score]);
 
   const strokeDashoffset = animatedValue.interpolate({
@@ -80,13 +77,7 @@ export default function ScoreRing({
         />
       </Svg>
       <View style={styles.textContainer}>
-        <Animated.Text
-          style={[styles.scoreText, { color }]}
-        >
-          {displayValue.interpolate
-            ? score.toString()
-            : score.toString()}
-        </Animated.Text>
+        <Text style={[styles.scoreText, { color }]}>{displayScore}</Text>
         <Text style={styles.outOf}>/100</Text>
         {label ? <Text style={styles.label}>{label}</Text> : null}
       </View>
@@ -108,6 +99,7 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: '800',
     letterSpacing: -1,
+    fontVariant: ['tabular-nums'],
   },
   outOf: {
     fontSize: 13,

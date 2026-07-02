@@ -24,6 +24,14 @@ export interface SwingAnalysis {
   strengths: string[];
 }
 
+export interface SwingRecord {
+  id: string;
+  date: string; // ISO 8601
+  viewAngle: 'face-on' | 'down-the-line';
+  thumbnail?: string; // base64 JPEG of a mid-swing frame
+  analysis: SwingAnalysis;
+}
+
 export interface AnalysisState {
   videoUri: string | null;
   frames: string[];

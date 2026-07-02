@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
-import { COLORS } from '../constants';
+import { COLORS, MODEL_DISPLAY_NAME } from '../constants';
 
 const API_KEY_STORE_KEY = 'anthropic_api_key';
 
@@ -126,8 +126,9 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Claude API Key</Text>
             <Text style={styles.sectionDesc}>
-              SwingIQ uses Claude claude-opus-4-8 to analyze your golf swing. Your API key is
-              stored securely on your device and never sent to our servers.
+              SwingIQ uses {MODEL_DISPLAY_NAME} to analyze your golf swing. Your
+              API key is stored securely on your device and never sent to our
+              servers.
             </Text>
 
             {hasSavedKey ? (
@@ -236,8 +237,10 @@ export default function SettingsScreen() {
 
           {/* App info */}
           <View style={styles.appInfo}>
-            <Text style={styles.appInfoText}>SwingIQ v1.0.0</Text>
-            <Text style={styles.appInfoText}>Powered by Claude claude-opus-4-8</Text>
+            <Text style={styles.appInfoText}>SwingIQ v1.1.0</Text>
+            <Text style={styles.appInfoText}>
+              Powered by {MODEL_DISPLAY_NAME}
+            </Text>
           </View>
         </ScrollView>
       </SafeAreaView>

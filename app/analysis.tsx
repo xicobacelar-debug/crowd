@@ -15,7 +15,8 @@ import * as SecureStore from 'expo-secure-store';
 import { useAnalysis } from '../context/AnalysisContext';
 import { extractVideoFrames } from '../services/videoProcessor';
 import { analyzeGolfSwing } from '../services/claudeAnalysis';
-import { COLORS, ANALYSIS_STEPS } from '../constants';
+import { newRecordId, saveSwingRecord } from '../services/storage';
+import { COLORS, ANALYSIS_STEPS, MODEL_DISPLAY_NAME } from '../constants';
 
 export default function AnalysisScreen() {
   const { state, setFrames, setAnalysis, setError } = useAnalysis();
@@ -47,7 +48,7 @@ export default function AnalysisScreen() {
 
   const advanceStep = (step: number) => {
     setCurrentStep(step);
-    setCompletedSteps((prev) => [...prev, step - 1]);
+    if (step > 0) setCompletedSteps((prev) => [...prev, step - 1]);
     Animated.timing(progressAnim, {
       toValue: (step / ANALYSIS_STEPS.length) * 100,
       duration: 500,
@@ -66,7 +67,7 @@ export default function AnalysisScreen() {
     try {
       // Step 1: Extract frames
       advanceStep(0);
-      const frames = await extractVideoFrames(state.videoUri, 6);
+      const frames = await extractVideoFrames(state.videoUri);
       setFrames(frames);
       if (frames.length > 0) setThumbnail(frames[0]);
 
@@ -93,6 +94,15 @@ export default function AnalysisScreen() {
       advanceStep(3);
       const analysis = await analyzeGolfSwing(frames, apiKey, state.viewAngle);
       setAnalysis(analysis);
+
+      // Persist to swing history (non-fatal if it fails)
+      await saveSwingRecord({
+        id: newRecordId(),
+        date: new Date().toISOString(),
+        viewAngle: state.viewAngle,
+        thumbnail: frames[Math.floor(frames.length / 2)],
+        analysis,
+      });
 
       setCompletedSteps([0, 1, 2, 3]);
       Animated.timing(progressAnim, {
@@ -242,7 +252,7 @@ export default function AnalysisScreen() {
             <Ionicons name="bulb-outline" size={16} color={COLORS.warning} />
             <Text style={styles.tipText}>
               Analyzing {state.viewAngle === 'face-on' ? 'face-on' : 'down-the-line'} view
-              · Using claude-opus-4-8
+              · Powered by {MODEL_DISPLAY_NAME}
             </Text>
           </Animated.View>
         </View>

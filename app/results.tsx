@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -123,6 +124,31 @@ export default function ResultsScreen() {
               </View>
             </LinearGradient>
           </Animated.View>
+
+          {/* Swing sequence frames */}
+          {state.frames.length > 0 && (
+            <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
+              <Text style={styles.sectionTitle}>Swing Sequence</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.frameStrip}
+              >
+                {state.frames.map((frame, i) => (
+                  <View key={i} style={styles.frameItem}>
+                    <Image
+                      source={{ uri: `data:image/jpeg;base64,${frame}` }}
+                      style={styles.frameImage}
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.frameLabel}>
+                      {i + 1}/{state.frames.length}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </Animated.View>
+          )}
 
           {/* Phase Scores */}
           {analysis.phases.length > 0 && (
@@ -440,6 +466,27 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+  },
+
+  frameStrip: {
+    gap: 8,
+  },
+  frameItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  frameImage: {
+    width: 96,
+    height: 128,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    backgroundColor: COLORS.cardBg,
+  },
+  frameLabel: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontVariant: ['tabular-nums'],
   },
 
   metricsGrid: {

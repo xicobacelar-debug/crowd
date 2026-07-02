@@ -18,6 +18,9 @@ export const COLORS = {
   gradientEnd: '#0A0E1A',
 };
 
+export const ANALYSIS_MODEL = 'claude-opus-4-8';
+export const MODEL_DISPLAY_NAME = 'Claude Opus 4.8';
+
 export const SWING_PHASES = [
   'Address',
   'Takeaway',
@@ -27,7 +30,10 @@ export const SWING_PHASES = [
   'Follow-through',
 ];
 
-export const FRAME_TIMESTAMPS_MS = [0, 400, 800, 1200, 1600, 2200];
+export const FRAME_COUNT = 8;
+
+// Used only when video duration can't be determined
+export const FALLBACK_TIMESTAMPS_MS = [0, 350, 700, 1050, 1400, 1800, 2200, 2600];
 
 export const SCORE_LABELS: Record<string, string> = {
   excellent: 'Excellent',

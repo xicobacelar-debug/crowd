@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,15 @@ import {
   Animated,
   ScrollView,
   Dimensions,
+  Image,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAnalysis } from '../context/AnalysisContext';
+import { getSwingHistory } from '../services/storage';
+import { SwingRecord } from '../types';
 import { COLORS } from '../constants';
 
 const { width } = Dimensions.get('window');
@@ -39,11 +43,31 @@ const FEATURES = [
   },
 ];
 
+function scoreColor(score: number): string {
+  if (score >= 80) return COLORS.primary;
+  if (score >= 60) return COLORS.warning;
+  return COLORS.error;
+}
+
 export default function HomeScreen() {
+  const { setAnalysis, setViewAngle } = useAnalysis();
+  const [recentSwings, setRecentSwings] = useState<SwingRecord[]>([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useFocusEffect(
+    useCallback(() => {
+      getSwingHistory().then((history) => setRecentSwings(history.slice(0, 3)));
+    }, [])
+  );
+
+  const openRecord = (record: SwingRecord) => {
+    setAnalysis(record.analysis);
+    setViewAngle(record.viewAngle);
+    router.push('/results');
+  };
 
   useEffect(() => {
     Animated.parallel([
@@ -197,6 +221,66 @@ export default function HomeScreen() {
               Record or upload a video of your swing — results in ~20 seconds
             </Text>
           </Animated.View>
+
+          {/* Recent Swings */}
+          {recentSwings.length > 0 && (
+            <Animated.View
+              style={[styles.recentSection, { opacity: fadeAnim }]}
+            >
+              <View style={styles.recentHeader}>
+                <Text style={styles.sectionTitle}>Recent Swings</Text>
+                <TouchableOpacity onPress={() => router.push('/history')}>
+                  <Text style={styles.seeAll}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              {recentSwings.map((record) => (
+                <TouchableOpacity
+                  key={record.id}
+                  style={styles.recentRow}
+                  onPress={() => openRecord(record)}
+                  activeOpacity={0.8}
+                >
+                  {record.thumbnail ? (
+                    <Image
+                      source={{
+                        uri: `data:image/jpeg;base64,${record.thumbnail}`,
+                      }}
+                      style={styles.recentThumb}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.recentThumb, styles.recentThumbFallback]}>
+                      <Ionicons name="golf" size={18} color={COLORS.textMuted} />
+                    </View>
+                  )}
+                  <View style={styles.recentInfo}>
+                    <Text style={styles.recentDate}>
+                      {new Date(record.date).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </Text>
+                    <Text style={styles.recentType} numberOfLines={1}>
+                      {record.analysis.swingType}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.recentScore,
+                      { color: scoreColor(record.analysis.overallScore) },
+                    ]}
+                  >
+                    {record.analysis.overallScore}
+                  </Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
+                </TouchableOpacity>
+              ))}
+            </Animated.View>
+          )}
 
           {/* Features Grid */}
           <Animated.View style={[styles.featuresSection, { opacity: fadeAnim }]}>
@@ -359,6 +443,58 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 12,
     textAlign: 'center',
+  },
+
+  recentSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  recentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  seeAll: {
+    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: '600',
+    paddingBottom: 16,
+  },
+  recentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    padding: 10,
+    marginBottom: 8,
+  },
+  recentThumb: {
+    width: 40,
+    height: 52,
+    borderRadius: 8,
+    backgroundColor: COLORS.background,
+  },
+  recentThumbFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recentInfo: { flex: 1, gap: 2 },
+  recentDate: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  recentType: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+  },
+  recentScore: {
+    fontSize: 18,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
 
   featuresSection: {
