@@ -206,6 +206,18 @@ export default function HomeScreen() {
                 <Text style={styles.primaryButtonText}>Analyze My Swing</Text>
               </LinearGradient>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => router.push('/tracker')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="golf-outline" size={20} color={COLORS.primary} />
+              <View style={styles.secondaryButtonTextWrap}>
+                <Text style={styles.secondaryButtonText}>12-Week Training Card</Text>
+                <Text style={styles.secondaryButtonSub}>HCP 31 → 25 · drills, rounds & KPIs</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            </TouchableOpacity>
           </Animated.View>
 
           {/* Info badge */}
@@ -429,6 +441,29 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+  },
+  secondaryButtonTextWrap: { flex: 1 },
+  secondaryButtonText: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  secondaryButtonSub: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
   },
 
   infoBadge: {
