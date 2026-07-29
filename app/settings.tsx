@@ -15,8 +15,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { COLORS, MODEL_DISPLAY_NAME } from '../constants';
+import {
+  backupNow,
+  getBackupInfo,
+  restoreFromCloud,
+  signIn,
+  signOut,
+  signUp,
+} from '../services/backup';
 
 const API_KEY_STORE_KEY = 'anthropic_api_key';
+
+function formatBackupTime(iso: string | null): string {
+  if (!iso) return 'Never';
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export default function SettingsScreen() {
   const [apiKey, setApiKey] = useState('');
@@ -26,9 +44,108 @@ export default function SettingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasSavedKey, setHasSavedKey] = useState(false);
 
+  const [backupEmail, setBackupEmail] = useState<string | null>(null);
+  const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [backupBusy, setBackupBusy] = useState(false);
+
   useEffect(() => {
     loadApiKey();
+    getBackupInfo()
+      .then((info) => {
+        setBackupEmail(info.email);
+        setLastBackupAt(info.lastBackupAt);
+      })
+      .catch(() => {});
   }, []);
+
+  const handleSignIn = async (createAccount: boolean) => {
+    const email = authEmail.trim();
+    if (!email || !authPassword) return;
+    setBackupBusy(true);
+    try {
+      if (createAccount) {
+        await signUp(email, authPassword);
+        Alert.alert(
+          'Check Your Email',
+          'We sent a confirmation link to ' +
+            email +
+            '. Tap it, then come back and press Sign In.'
+        );
+      } else {
+        await signIn(email, authPassword);
+        setBackupEmail(email);
+        setAuthPassword('');
+        // First backup right away so the account is never empty
+        try {
+          setLastBackupAt(await backupNow());
+        } catch {
+          // No tracker data yet — the weekly auto-backup will pick it up
+        }
+      }
+    } catch (e) {
+      Alert.alert(
+        createAccount ? 'Sign Up Failed' : 'Sign In Failed',
+        e instanceof Error ? e.message : 'Please try again.'
+      );
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleBackupNow = async () => {
+    setBackupBusy(true);
+    try {
+      setLastBackupAt(await backupNow());
+      Alert.alert('Backed Up', 'Your training card is safe in the cloud.');
+    } catch (e) {
+      Alert.alert(
+        'Backup Failed',
+        e instanceof Error ? e.message : 'Please try again.'
+      );
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleRestore = () => {
+    Alert.alert(
+      'Restore from Cloud',
+      'This replaces the tracker data on this phone with your latest cloud backup. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Restore',
+          style: 'destructive',
+          onPress: async () => {
+            setBackupBusy(true);
+            try {
+              const at = await restoreFromCloud();
+              Alert.alert(
+                at ? 'Restored' : 'No Backup Found',
+                at
+                  ? `Tracker restored from the backup made ${formatBackupTime(at)}.`
+                  : 'This account has no cloud backup yet.'
+              );
+            } catch (e) {
+              Alert.alert(
+                'Restore Failed',
+                e instanceof Error ? e.message : 'Please try again.'
+              );
+            } finally {
+              setBackupBusy(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    setBackupEmail(null);
+  };
 
   const loadApiKey = async () => {
     try {
@@ -199,6 +316,120 @@ export default function SettingsScreen() {
                 )}
               </TouchableOpacity>
             </View>
+          </View>
+
+          {/* Cloud Backup */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Cloud Backup</Text>
+            <Text style={styles.sectionDesc}>
+              Your 12-week training card is backed up to the cloud automatically
+              once a week while you're signed in, so it survives reinstalls and
+              phone changes.
+            </Text>
+
+            {backupEmail ? (
+              <View style={styles.backupCard}>
+                <View style={styles.savedKeyRow}>
+                  <Ionicons
+                    name="cloud-done-outline"
+                    size={20}
+                    color={COLORS.primary}
+                  />
+                  <View style={styles.savedKeyInfo}>
+                    <Text style={styles.savedKeyLabel}>{backupEmail}</Text>
+                    <Text style={styles.savedKeyValue}>
+                      Last backup: {formatBackupTime(lastBackupAt)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.backupActions}>
+                  <TouchableOpacity
+                    style={[styles.backupBtn, backupBusy && styles.saveBtnDisabled]}
+                    onPress={handleBackupNow}
+                    disabled={backupBusy}
+                  >
+                    {backupBusy ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <Text style={styles.backupBtnText}>Back Up Now</Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.backupBtnSecondary,
+                      backupBusy && styles.saveBtnDisabled,
+                    ]}
+                    onPress={handleRestore}
+                    disabled={backupBusy}
+                  >
+                    <Text style={styles.backupBtnSecondaryText}>Restore</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
+                  <Text style={styles.removeKeyText}>Sign Out</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.inputSection}>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={styles.input}
+                    value={authEmail}
+                    onChangeText={setAuthEmail}
+                    placeholder="you@email.com"
+                    placeholderTextColor={COLORS.textMuted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                  />
+                </View>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={styles.input}
+                    value={authPassword}
+                    onChangeText={setAuthPassword}
+                    placeholder="Password (min 6 characters)"
+                    placeholderTextColor={COLORS.textMuted}
+                    secureTextEntry
+                    autoCapitalize="none"
+                  />
+                </View>
+                <View style={styles.backupActions}>
+                  <TouchableOpacity
+                    style={[
+                      styles.backupBtn,
+                      (!authEmail.trim() || authPassword.length < 6 || backupBusy) &&
+                        styles.saveBtnDisabled,
+                    ]}
+                    onPress={() => handleSignIn(false)}
+                    disabled={
+                      !authEmail.trim() || authPassword.length < 6 || backupBusy
+                    }
+                  >
+                    {backupBusy ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <Text style={styles.backupBtnText}>Sign In</Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.backupBtnSecondary,
+                      (!authEmail.trim() || authPassword.length < 6 || backupBusy) &&
+                        styles.saveBtnDisabled,
+                    ]}
+                    onPress={() => handleSignIn(true)}
+                    disabled={
+                      !authEmail.trim() || authPassword.length < 6 || backupBusy
+                    }
+                  >
+                    <Text style={styles.backupBtnSecondaryText}>
+                      Create Account
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
 
           {/* How to get API key */}
@@ -377,6 +608,51 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 15,
     fontWeight: '700',
+  },
+
+  backupCard: {
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,166,81,0.3)',
+    gap: 12,
+  },
+  backupActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  backupBtn: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backupBtnText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  backupBtnSecondary: {
+    flex: 1,
+    borderRadius: 12,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    backgroundColor: COLORS.cardBg,
+  },
+  backupBtnSecondaryText: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  signOutBtn: {
+    alignSelf: 'center',
+    paddingVertical: 2,
   },
 
   stepsCard: {

@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAnalysis } from '../context/AnalysisContext';
 import { getSwingHistory } from '../services/storage';
+import { maybeWeeklyBackup } from '../services/backup';
 import { SwingRecord } from '../types';
 import { COLORS } from '../constants';
 
@@ -68,6 +69,10 @@ export default function HomeScreen() {
     setViewAngle(record.viewAngle);
     router.push('/results');
   };
+
+  useEffect(() => {
+    maybeWeeklyBackup();
+  }, []);
 
   useEffect(() => {
     Animated.parallel([
